@@ -1,0 +1,85 @@
+version: '3.7'
+services:
+  es01:
+    build: ./elasticsearch
+    container_name: es01
+    environment:
+      - node.name=es01
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      #- esdata01:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./elasticsearch/config/log4j2.properties:/usr/share/elasticsearch/config/log4j2.properties
+    ports:
+      - 9200:9200
+    networks:
+      - esnet
+
+  kibana01:
+    build: ./kibana
+    container_name: kibana01
+    links:
+      - es01:elasticsearch
+    volumes:
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - 5601:5601
+    networks:
+      - esnet
+
+  logstash01:
+    build: ./logstash
+    container_name: logstash01
+    links:
+      - es01:elasticsearch
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/config/jvm.options:/usr/share/logstash/config/jvm.options
+      - ./logstash/config/log4j2.properties:/usr/share/logstash/config/log4j2.properties
+      - ./logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml
+      - ./logstash/pipeline/:/usr/share/logstash/pipeline/
+      - ./logstash/extra_patterns/date_jp:/opt/logstash/extra_patterns
+    networks:
+      - esnet
+  
+  filebeat01:
+    build: ./beats/filebeat
+    container_name: filebeat01
+    links:
+      - logstash01:logstash
+    volumes:
+      - ./beats/filebeat/config/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./beats/filebeat/logs/:/var/log/
+    networks:
+      - esnet
+
+  metricbeat01:
+    build: ./beats/metricbeat
+    container_name: metricbeat01
+    links:
+      - es01:elasticsearch
+      - kibana01:kibana
+      - logstash01:logstash
+      - filebeat01:filebeat
+    user: root
+    volumes:
+      - ./beats/metricbeat/config/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      #- /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      #- /proc:/hostfs/proc:ro
+      #- /:/hostfs:ro
+    networks:
+      - esnet
+    #command: -e -system.hostfs=/hostfs
+
+#volumes:
+#  esdata01:
+#    driver: local
+
+networks:
+  esnet:
+    driver: bridge
