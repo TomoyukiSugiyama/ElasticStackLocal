@@ -28,14 +28,13 @@
 
 - pipeline.id: filebeat-processing
   path.config: "/usr/share/logstash/pipeline/{input/filebeat_in,filter/filebeat_filter,output/filebeat_out}.cfg"
-  pipeline.batch.size: 50
-  pipeline.batch.delay: 50
+  pipeline.batch.size: 1
+  pipeline.batch.delay: 1
 
 - pipeline.id: metricbeat-processing
   path.config: "/usr/share/logstash/pipeline/{input/metricbeat_in,filter/metricbeat_filter,output/metricbeat_out}.cfg"
-  pipeline.batch.size: 50
-  pipeline.batch.delay: 50
-
+  pipeline.batch.size: 1
+  pipeline.batch.delay: 1
 # Available options:
 #
 #   # name of the pipeline
